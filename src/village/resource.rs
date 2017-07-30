@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 pub enum ResourceType {
     Gold,
     Food,
@@ -7,4 +8,5 @@ pub enum ResourceType {
 
 pub struct Resource {
     pub resource_type : ResourceType,
+    pub worker_count : u32,
 }

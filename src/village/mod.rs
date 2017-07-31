@@ -29,11 +29,14 @@ impl Village {
     }
 
     pub fn assign_worker(&mut self, resource_type: ResourceType) {
-        for resource in self.resources.iter_mut() {
-            if resource.resource_type == resource_type {
-                resource.worker_count += 1;
+        //check for enough idle workers
+        if(self.idle_worker_count() > 0) {
+            for resource in self.resources.iter_mut() {
+                if resource.resource_type == resource_type {
+                    resource.worker_count += 1;
 
-                return;
+                    return;
+                }
             }
         }
     }
@@ -78,6 +81,13 @@ mod tests {
         v.assign_worker(ResourceType::Wood);
 
         assert_eq!(1, v.resource(ResourceType::Wood).unwrap().worker_count);
+
+        //check that you can't assign more workers then available
+        v.assign_worker(ResourceType::Wood);
+        v.assign_worker(ResourceType::Wood);
+        v.assign_worker(ResourceType::Wood);
+        v.assign_worker(ResourceType::Wood);
+        assert_eq!(4, v.resource(ResourceType::Wood).unwrap().worker_count);
     }
 
     #[test]

@@ -1,18 +1,26 @@
 pub mod resource;
-
 use resource::*;
+use std::collections::HashMap;
 
 pub struct Village {
     pub worker_count : u32,
     resources : Vec<Resource>,
+    pub stockpile : HashMap<ResourceType, u32>,
 }
 
 impl Village {
     pub fn new(worker_count: u32) -> Village {
-        Village {
+        let mut village = Village {
             worker_count: worker_count,
             resources: vec!(),
+            stockpile: HashMap::new(),
+        };
+
+        //add each resourcetype to the stockpile
+        for resource_type in ResourceType::iterator() {
+            village.stockpile.insert(*resource_type, 0);
         }
+        village
     }
 
     pub fn add_resource(&mut self, resource_type: ResourceType) {
@@ -33,8 +41,7 @@ impl Village {
     }
 
     pub fn assign_worker_multiple(&mut self, resource_type: ResourceType, number_of_workers: u32) {
-        if(self.idle_worker_count() >= number_of_workers)
-        {
+        if self.idle_worker_count() >= number_of_workers {
             for resource in self.resources.iter_mut() {
                 if resource.resource_type == resource_type {
                     resource.worker_count += number_of_workers;
@@ -45,7 +52,7 @@ impl Village {
         }
     }
 
-    pub fn resource(& self, resource_type: ResourceType) -> Option<&Resource> {
+    pub fn resource(&self, resource_type: ResourceType) -> Option<&Resource> {
         self.resources.iter().find(|r| r.resource_type == resource_type)
     }
 
@@ -55,12 +62,19 @@ impl Village {
             .collect()
     }
 
-    pub fn idle_worker_count(& self) -> u32 {
+    pub fn idle_worker_count(&self) -> u32 {
         let assigned_count : u32 = self.resources.iter()
             .map(|r| r.worker_count)
             .sum();
 
         self.worker_count - assigned_count
+    }
+
+    pub fn collect_resources(&mut self) {
+        for resource in self.resources.iter_mut() {
+            //update the resource count
+            *self.stockpile.get_mut(&resource.resource_type).unwrap() += resource.collect();
+        }
     }
 }
 
@@ -125,5 +139,22 @@ mod tests {
         v.assign_worker(ResourceType::Gold);
 
         assert_eq!(4, v.idle_worker_count());
+    }
+
+    #[test]
+    fn stockpile() {
+        let mut v = Village::new(5);
+        let value = v.stockpile.get(&ResourceType::Food);
+        assert_eq!(0, *value.unwrap());
+    }
+
+    #[test]
+    fn stockpile_collection() {
+        let mut v = Village::new(5);
+        v.add_resource(ResourceType::Wood);
+        v.assign_worker_multiple(ResourceType::Wood, 5);
+        v.collect_resources();
+
+        assert_eq!(5, *v.stockpile.get(&ResourceType::Wood).unwrap());
     }
 }

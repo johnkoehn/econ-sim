@@ -16,7 +16,7 @@ impl Village {
             stockpile: HashMap::new(),
         };
 
-        //add each resourcetype to the stockpile
+        //add each resource type to the stockpile
         for resource_type in ResourceType::iterator() {
             village.stockpile.insert(*resource_type, 0);
         }
@@ -36,11 +36,7 @@ impl Village {
         });
     }
 
-    pub fn assign_worker(&mut self, resource_type: ResourceType) {
-        self.assign_worker_multiple(resource_type, 1);
-    }
-
-    pub fn assign_worker_multiple(&mut self, resource_type: ResourceType, number_of_workers: u32) {
+    pub fn assign_workers(&mut self, resource_type: ResourceType, number_of_workers: u32) {
         if self.idle_worker_count() >= number_of_workers {
             for resource in self.resources.iter_mut() {
                 if resource.resource_type == resource_type {
@@ -81,7 +77,6 @@ impl Village {
 #[cfg(test)]
 mod tests {
     use village::*;
-    use resource::*;
 
     #[test]
     fn disallow_adding_existing_resource() {
@@ -93,35 +88,33 @@ mod tests {
     }
 
     #[test]
-    fn assign_worker_to_resource() {
+    fn assign_workers_to_resource() {
         let mut v = Village::new(4);
         v.add_resource(ResourceType::Wood);
-        v.assign_worker(ResourceType::Wood);
+        v.assign_workers(ResourceType::Wood, 1);
 
         assert_eq!(1, v.resource(ResourceType::Wood).unwrap().worker_count);
-
-        //check that you can't assign more workers then available
-        v.assign_worker(ResourceType::Wood);
-        v.assign_worker(ResourceType::Wood);
-        v.assign_worker(ResourceType::Wood);
-        v.assign_worker(ResourceType::Wood);
-        assert_eq!(4, v.resource(ResourceType::Wood).unwrap().worker_count);
     }
 
     #[test]
-    fn assign_worker_to_resource_multiple()
-    {
+    fn assign_workers_to_resource_up_to_limit() {
+        let mut v = Village::new(2);
+        v.add_resource(ResourceType::Stone);
+        v.assign_workers(ResourceType::Stone, 1);
+        v.assign_workers(ResourceType::Stone, 1);
+
+        assert_eq!(2, v.resource(ResourceType::Stone).unwrap().worker_count);
+    }
+
+    #[test]
+    fn assign_workers_to_different_resources() {
         let mut v = Village::new(4);
         v.add_resource(ResourceType::Wood);
         v.add_resource(ResourceType::Gold);
-        
-        v.assign_worker_multiple(ResourceType::Wood, 2);
-        assert_eq!(2, v.resource(ResourceType::Wood).unwrap().worker_count);
+        v.assign_workers(ResourceType::Wood, 2);
+        v.assign_workers(ResourceType::Gold, 2);
 
-        v.assign_worker_multiple(ResourceType::Wood, 3);
         assert_eq!(2, v.resource(ResourceType::Wood).unwrap().worker_count);
-
-        v.assign_worker_multiple(ResourceType::Gold, 2);
         assert_eq!(2, v.resource(ResourceType::Gold).unwrap().worker_count);
     }
 
@@ -136,14 +129,14 @@ mod tests {
     fn idle_worker_count_after_assigning() {
         let mut v = Village::new(5);
         v.add_resource(ResourceType::Gold);
-        v.assign_worker(ResourceType::Gold);
+        v.assign_workers(ResourceType::Gold, 1);
 
         assert_eq!(4, v.idle_worker_count());
     }
 
     #[test]
     fn stockpile() {
-        let mut v = Village::new(5);
+        let v = Village::new(5);
         let value = v.stockpile.get(&ResourceType::Food);
         assert_eq!(0, *value.unwrap());
     }
@@ -152,7 +145,7 @@ mod tests {
     fn stockpile_collection() {
         let mut v = Village::new(5);
         v.add_resource(ResourceType::Wood);
-        v.assign_worker_multiple(ResourceType::Wood, 5);
+        v.assign_workers(ResourceType::Wood, 5);
         v.collect_resources();
 
         assert_eq!(5, *v.stockpile.get(&ResourceType::Wood).unwrap());

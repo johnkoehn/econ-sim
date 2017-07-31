@@ -11,8 +11,8 @@ pub enum ResourceType {
 
 impl ResourceType {
     pub fn iterator() -> Iter<'static, ResourceType> {
-        static ResourceTypes: [ResourceType; 4] = [Gold, Food, Wood, Stone];
-        ResourceTypes.into_iter()
+        static RESOURCE_TYPES: [ResourceType; 4] = [Gold, Food, Wood, Stone];
+        RESOURCE_TYPES.into_iter()
     }
 }
 

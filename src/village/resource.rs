@@ -1,4 +1,4 @@
-#[derive(PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum ResourceType {
     Gold,
     Food,

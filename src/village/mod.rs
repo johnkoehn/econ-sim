@@ -40,10 +40,15 @@ impl Village {
         }
     }
 
-    // //TODO: Needs to be modified. An empty collection if none
-    // pub fn resource(&self, resource_type: ResourceType) -> Option<&Resource> {
-    //     self.resources.iter().find(|r| r.resource_type == resource_type)
-    // }
+    pub fn remove_workers(&mut self, resource_id: u32, number_of_workers: u32) {
+        if resource_id < self.number_of_resource_sites && self.resources[resource_id as usize].worker_count >= number_of_workers {
+            self.resources[resource_id as usize].worker_count -= number_of_workers;
+        }
+    }
+
+    pub fn resources(&self, resource_type: ResourceType) -> Vec<&Resource> {
+        self.resources.iter().filter(|r| r.resource_type == resource_type).collect::<Vec<_>>()
+    }
 
     pub fn all_resources(&self) -> &Vec<Resource> {
         &self.resources
@@ -102,6 +107,22 @@ mod tests {
     }
 
     #[test]
+    fn remove_workers_from_resource()
+    {
+        let mut v = Village::new(4);
+        v.create_resource(ResourceType::Gold);
+        v.create_resource(ResourceType::Wood);
+        v.assign_workers(0, 3);
+        v.assign_workers(1, 1);
+        v.remove_workers(0, 2);
+        v.remove_workers(1, 1);
+
+        let x = v.all_resources();
+        assert_eq!(1, x[0].worker_count);
+        assert_eq!(0, x[1].worker_count);
+    }
+
+    #[test]
     fn assign_workers_to_resource_up_to_limit() {
         let mut v = Village::new(2);
         v.create_resource(ResourceType::Stone);
@@ -143,5 +164,22 @@ mod tests {
         v.collect_resources();
 
         assert_eq!(5, *v.stockpile.get(&ResourceType::Wood).unwrap());
+    }
+
+    #[test]
+    fn get_resources_by_type()
+    {
+        let mut v = Village::new(5);
+        v.create_resource(ResourceType::Gold);
+        v.create_resource(ResourceType::Gold);
+        v.create_resource(ResourceType::Wood);
+        v.create_resource(ResourceType::Wood);
+        v.create_resource(ResourceType::Wood);
+        v.create_resource(ResourceType::Stone);
+
+        assert_eq!(2, v.resources(ResourceType::Gold).len());
+        assert_eq!(3, v.resources(ResourceType::Wood).len());
+        assert_eq!(1, v.resources(ResourceType::Stone).len());
+        assert_eq!(0, v.resources(ResourceType::Food).len());
     }
 }

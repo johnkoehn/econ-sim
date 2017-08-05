@@ -18,12 +18,5 @@ impl ResourceType {
 
 pub struct Resource {
     pub resource_type : ResourceType,
-    pub worker_count : u32,
     pub resource_id : u32,
-}
-
-impl Resource {
-    pub fn collect(&self) -> u32 {
-        self.worker_count
-    }
 }

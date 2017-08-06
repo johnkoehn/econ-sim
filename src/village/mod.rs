@@ -1,8 +1,8 @@
 pub mod resource;
 pub mod worker;
 
-use village_manager::village::resource::*;
-use village_manager::village::worker::*;
+use village::resource::*;
+use village::worker::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -116,7 +116,7 @@ impl Village {
 
 #[cfg(test)]
 mod tests {
-    use village_manager::village::*;
+    use village::*;
 
     #[test]
     fn create_resources() {

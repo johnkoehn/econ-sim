@@ -1,5 +1,6 @@
-mod village_manager;
-mod simulation_manager;
+mod simulation;
+mod village;
+mod village_mind;
 
 fn main() {
 }

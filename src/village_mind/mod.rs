@@ -1,4 +1,4 @@
-use village_manager::village::*;
+use village::*;
 
 pub struct VillageMind {
     village: VillageRef,

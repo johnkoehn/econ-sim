@@ -5,5 +5,3 @@ pub struct VillageManager {
     pub village: VillageRef,
     pub village_mind: VillageMind,
 }
-
-

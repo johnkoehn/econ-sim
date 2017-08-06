@@ -1,6 +1,6 @@
+mod simulation;
 mod village;
-
-use village::*;
+mod village_mind;
 
 fn main() {
 }

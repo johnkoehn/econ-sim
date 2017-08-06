@@ -1,14 +1,11 @@
 use village_manager::village::*;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 pub struct VillageMind {
-    village: Rc<RefCell<Village>>,
+    village: VillageRef,
 }
 
 impl VillageMind {
-    pub fn new(village: Rc<RefCell<Village>>) -> VillageMind {
+    pub fn new(village: VillageRef) -> VillageMind {
         VillageMind {
             village: village,
         }

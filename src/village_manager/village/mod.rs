@@ -4,6 +4,10 @@ pub mod worker;
 use village_manager::village::resource::*;
 use village_manager::village::worker::*;
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+pub type VillageRef = Rc<RefCell<Village>>;
 
 pub struct Village {
     pub stockpile: HashMap<ResourceType, u32>,

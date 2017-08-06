@@ -42,11 +42,7 @@ impl Village {
     /// Returns the id of the Worker instance
     pub fn create_worker(&mut self) -> WorkerId {
         self.worker_id_counter += 1;
-
-        self.workers.push(Worker {
-            worker_id: self.worker_id_counter,
-            assigned_resource: 0,
-        });
+        self.workers.push(Worker::new(self.worker_id_counter));
 
         self.worker_id_counter
     }
@@ -95,7 +91,15 @@ impl Village {
         self.workers.iter().filter(|w| w.assigned_resource == 0).count() as u32
     }
 
-    pub fn collect_resources(&mut self) {
+    pub fn worker(&self, worker_id: WorkerId) -> Option<&Worker> {
+        self.workers.iter().find(|w| w.worker_id == worker_id)
+    }
+
+    pub fn workers_on_resource(&self, resource_id: u32) -> Vec<&Worker> {
+        self.workers.iter().filter(|w| w.assigned_resource == resource_id).collect()
+    }
+
+    pub fn simulate(&mut self) {
         for worker in self.workers.iter() {
             let resource_type : ResourceType;
 
@@ -107,10 +111,10 @@ impl Village {
 
             *self.stockpile.get_mut(&resource_type).unwrap() += 1;
         }
-    }
 
-    pub fn workers_on_resource(&self, resource_id: u32) -> Vec<&Worker> {
-        self.workers.iter().filter(|w| w.assigned_resource == resource_id).collect()
+        for worker in self.workers.iter_mut() {
+            worker.age += 1;
+        }
     }
 }
 
@@ -154,14 +158,15 @@ mod tests {
     }
 
     #[test]
-    fn stockpile() {
+    fn stockpile_starts_empty() {
         let v = Village::new();
         let value = v.stockpile.get(&ResourceType::Food);
+
         assert_eq!(0, *value.unwrap());
     }
 
     #[test]
-    fn stockpile_collection() {
+    fn simulate_collect_resources() {
         let mut v = Village::new();
         let r1 = v.create_resource(ResourceType::Wood);
         let w1 = v.create_worker();
@@ -169,9 +174,32 @@ mod tests {
 
         v.assign_worker(w1, r1);
         v.assign_worker(w2, r1);
-        v.collect_resources();
+        v.simulate();
 
         assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap());
+    }
+
+    #[test]
+    fn simulate_increase_worker_age() {
+        let mut v = Village::new();
+        let w1 = v.create_worker();
+
+        v.simulate();
+
+        assert_eq!(1, v.worker(w1).unwrap().age);
+    }
+
+    #[test]
+    fn simulate_increase_worker_age_multiple() {
+        let mut v = Village::new();
+        let w1 = v.create_worker();
+        let w2 = v.create_worker();
+
+        v.simulate();
+        v.simulate();
+
+        assert_eq!(2, v.worker(w1).unwrap().age);
+        assert_eq!(2, v.worker(w2).unwrap().age);
     }
 
     #[test]

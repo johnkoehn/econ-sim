@@ -9,24 +9,28 @@ use std::rc::Rc;
 
 pub type VillageRef = Rc<RefCell<Village>>;
 
+pub type CheckForWorkerDeath = fn(&Worker) -> bool;
+
 pub struct Village {
     pub stockpile: HashMap<ResourceType, u32>,
 
     workers: Vec<Worker>,
     worker_id_counter: u32,
-
     resources: Vec<Resource>,
     resource_id_counter: u32,
+
+    check_for_worker_death: CheckForWorkerDeath,
 }
 
 impl Village {
-    pub fn new() -> Village {
+    pub fn new(check_for_worker_death: CheckForWorkerDeath) -> Village {
         let mut village = Village {
             stockpile: HashMap::new(),
             workers: vec!(),
             worker_id_counter: 0,
             resources: vec!(),
             resource_id_counter: 0,
+            check_for_worker_death: check_for_worker_death,
         };
 
         //add each resource type to the stockpile
@@ -42,11 +46,7 @@ impl Village {
     /// Returns the id of the Worker instance
     pub fn create_worker(&mut self) -> WorkerId {
         self.worker_id_counter += 1;
-
-        self.workers.push(Worker {
-            worker_id: self.worker_id_counter,
-            assigned_resource: 0,
-        });
+        self.workers.push(Worker::new(self.worker_id_counter));
 
         self.worker_id_counter
     }
@@ -95,7 +95,15 @@ impl Village {
         self.workers.iter().filter(|w| w.assigned_resource == 0).count() as u32
     }
 
-    pub fn collect_resources(&mut self) {
+    pub fn worker(&self, worker_id: WorkerId) -> Option<&Worker> {
+        self.workers.iter().find(|w| w.worker_id == worker_id)
+    }
+
+    pub fn workers_on_resource(&self, resource_id: u32) -> Vec<&Worker> {
+        self.workers.iter().filter(|w| w.assigned_resource == resource_id).collect()
+    }
+
+    pub fn simulate(&mut self) {
         for worker in self.workers.iter() {
             let resource_type : ResourceType;
 
@@ -107,10 +115,14 @@ impl Village {
 
             *self.stockpile.get_mut(&resource_type).unwrap() += 1;
         }
-    }
 
-    pub fn workers_on_resource(&self, resource_id: u32) -> Vec<&Worker> {
-        self.workers.iter().filter(|w| w.assigned_resource == resource_id).collect()
+        for worker in self.workers.iter_mut() {
+            worker.age += 1;
+            worker.is_alive = !(self.check_for_worker_death)(&worker);
+        }
+
+        // remove workers not alive
+        self.workers.retain(|ref w| w.is_alive);
     }
 }
 
@@ -118,9 +130,13 @@ impl Village {
 mod tests {
     use village::*;
 
+    fn default_village() -> Village {
+        Village::new(|w: &Worker| false)
+    }
+
     #[test]
     fn create_resources() {
-        let mut v = Village::new();
+        let mut v = default_village();
         v.create_resource(ResourceType::Gold);
         v.create_resource(ResourceType::Gold);
         v.create_resource(ResourceType::Wood);
@@ -130,7 +146,7 @@ mod tests {
 
     #[test]
     fn assign_worker_to_resource() {
-        let mut v = Village::new();
+        let mut v = default_village();
         let w1 = v.create_worker();
         let r1 = v.create_resource(ResourceType::Gold);
 
@@ -142,7 +158,7 @@ mod tests {
 
     #[test]
     fn unassign_worker_from_resource() {
-        let mut v = Village::new();
+        let mut v = default_village();
         let w1 = v.create_worker();
         let r1 = v.create_resource(ResourceType::Gold);
 
@@ -154,29 +170,65 @@ mod tests {
     }
 
     #[test]
-    fn stockpile() {
-        let v = Village::new();
+    fn stockpile_starts_empty() {
+        let v = default_village();
         let value = v.stockpile.get(&ResourceType::Food);
+
         assert_eq!(0, *value.unwrap());
     }
 
     #[test]
-    fn stockpile_collection() {
-        let mut v = Village::new();
+    fn simulate_collect_resources() {
+        let mut v = default_village();
         let r1 = v.create_resource(ResourceType::Wood);
         let w1 = v.create_worker();
         let w2 = v.create_worker();
 
         v.assign_worker(w1, r1);
         v.assign_worker(w2, r1);
-        v.collect_resources();
+        v.simulate();
 
         assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap());
     }
 
     #[test]
+    fn simulate_increase_worker_age() {
+        let mut v = default_village();
+        let w1 = v.create_worker();
+
+        v.simulate();
+
+        assert_eq!(1, v.worker(w1).unwrap().age);
+    }
+
+    #[test]
+    fn simulate_increase_worker_age_multiple() {
+        let mut v = default_village();
+        let w1 = v.create_worker();
+        let w2 = v.create_worker();
+
+        v.simulate();
+        v.simulate();
+
+        assert_eq!(2, v.worker(w1).unwrap().age);
+        assert_eq!(2, v.worker(w2).unwrap().age);
+    }
+
+    #[test]
+    fn simulate_worker_death() {
+        let mut v = Village::new(|w| w.worker_id == 1);
+        let w1 = v.create_worker();
+        let w2 = v.create_worker();
+
+        v.simulate();
+
+        assert!(v.worker(w1).is_none());
+        assert!(v.worker(w2).is_some());
+    }
+
+    #[test]
     fn get_resources_by_type() {
-        let mut v = Village::new();
+        let mut v = default_village();
         v.create_resource(ResourceType::Gold);
         v.create_resource(ResourceType::Wood);
         v.create_resource(ResourceType::Wood);

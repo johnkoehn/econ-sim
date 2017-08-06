@@ -39,11 +39,14 @@ mod tests {
     use village_mind::*;
     use simulation::*;
 
+    fn default_village() -> Village {
+        Village::new(|w: &worker::Worker| false)
+    }
+
     #[test]
     fn add_village() {
         let mut simulation = Simulation::new();
-        let v1 = Village::new();
-        simulation.add_village(v1);
+        simulation.add_village(default_village());
 
         assert_eq!(1, simulation.village_managers().len());
     }

@@ -1,8 +1,8 @@
 pub mod resource;
 pub mod worker;
 
-use resource::*;
-use worker::*;
+use village_manager::village::resource::*;
+use village_manager::village::worker::*;
 use std::collections::HashMap;
 
 pub struct Village {
@@ -50,7 +50,7 @@ impl Village {
     /// Adds a new Resource instance to this Village.
     /// Resource id values start at 1 and auto increment in subsequent invocations
     /// Returns the id of the Resource instance
-    pub fn create_resource(&mut self, resource_type: ResourceType) -> u32 {
+    pub fn create_resource(&mut self, resource_type: ResourceType) -> ResourceId {
         self.resource_id_counter += 1;
 
         self.resources.push(Resource {
@@ -61,7 +61,9 @@ impl Village {
         self.resource_id_counter
     }
 
-    pub fn assign_worker(&mut self, worker_id: WorkerId, resource_id: u32) {
+    /// Assigns a worker to an object
+    /// Passing in a resource id of value 0 will cause the worker to be ideal
+    pub fn assign_worker(&mut self, worker_id: WorkerId, resource_id: ResourceId) {
         if let Some(w) = self.workers.iter_mut().find(|w| w.worker_id == worker_id) {
             if resource_id == 0 {
                 w.assigned_resource = 0;
@@ -71,7 +73,7 @@ impl Village {
         }
     }
 
-    pub fn resource(&self, resource_id: u32) -> Option<&Resource> {
+    pub fn resource(&self, resource_id: ResourceId) -> Option<&Resource> {
         self.resources.iter().find(|r| r.resource_id == resource_id)
     }
 
@@ -110,7 +112,7 @@ impl Village {
 
 #[cfg(test)]
 mod tests {
-    use village::*;
+    use village_manager::village::*;
 
     #[test]
     fn create_resources() {

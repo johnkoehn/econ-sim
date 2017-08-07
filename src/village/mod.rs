@@ -67,14 +67,20 @@ impl Village {
 
     /// Assigns a worker to an object
     /// Passing in a resource id of value 0 will cause the worker to be ideal
-    pub fn assign_worker(&mut self, worker_id: WorkerId, resource_id: ResourceId) {
+    pub fn assign_worker(&mut self, worker_id: WorkerId, resource_id: ResourceId) -> Result<(), &'static str> {
         if let Some(w) = self.workers.iter_mut().find(|w| w.worker_id == worker_id) {
             if resource_id == 0 {
                 w.assigned_resource = 0;
             } else if let Some(r) = self.resources.iter().find(|r| r.resource_id == resource_id) {
                 w.assigned_resource = r.resource_id;
+            } else {
+               return Err("Invalid Resource ID");
             }
         }
+        else {
+            return Err("Invalid Worker ID");
+        }
+        Ok(())
     }
 
     pub fn resource(&self, resource_id: ResourceId) -> Option<&Resource> {
@@ -167,6 +173,22 @@ mod tests {
 
         assert_eq!(0, v.workers_on_resource(r1).len());
         assert_eq!(1, v.idle_worker_count());
+    }
+
+    #[test]
+    fn assign_worker_to_resource_invalid_worker_id() {
+        let mut v = default_village();
+        let r1 = v.create_resource(ResourceType::Gold);
+
+        assert!(v.assign_worker(1, r1).is_err());
+    }
+
+    #[test]
+    fn assign_worker_to_resource_invalid_resource_id() {
+        let mut v = default_village();
+        let w1 = v.create_worker();
+
+        assert!(v.assign_worker(w1, 1).is_err());
     }
 
     #[test]

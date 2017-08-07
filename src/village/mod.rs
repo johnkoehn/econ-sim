@@ -54,12 +54,13 @@ impl Village {
     /// Adds a new Resource instance to this Village.
     /// Resource id values start at 1 and auto increment in subsequent invocations
     /// Returns the id of the Resource instance
-    pub fn create_resource(&mut self, resource_type: ResourceType) -> ResourceId {
+    pub fn create_resource(&mut self, resource_type: ResourceType, collect_resource: CollectResource) -> ResourceId {
         self.resource_id_counter += 1;
 
         self.resources.push(Resource {
             resource_type: resource_type,
             resource_id: self.resource_id_counter,
+            collect_resource: collect_resource,
         });
 
         self.resource_id_counter
@@ -110,16 +111,9 @@ impl Village {
     }
 
     pub fn simulate(&mut self) {
-        for worker in self.workers.iter() {
-            let resource_type : ResourceType;
-
-            if let Some(r) = self.resource(worker.assigned_resource) {
-                resource_type = r.resource_type;
-            } else {
-                continue;
-            }
-
-            *self.stockpile.get_mut(&resource_type).unwrap() += 1;
+        for resource in self.resources.iter() {
+            let worker_count = self.workers_on_resource(resource.resource_id).len();
+            *self.stockpile.get_mut(&resource.resource_type).unwrap() += (resource.collect_resource)(worker_count as u32);
         }
 
         for worker in self.workers.iter_mut() {
@@ -140,12 +134,16 @@ mod tests {
         Village::new(|w: &Worker| false)
     }
 
+    fn default_collect_resource() -> fn(u32) -> u32 {
+        move |x| x
+    }
+
     #[test]
     fn create_resources() {
         let mut v = default_village();
-        v.create_resource(ResourceType::Gold);
-        v.create_resource(ResourceType::Gold);
-        v.create_resource(ResourceType::Wood);
+        v.create_resource(ResourceType::Gold, default_collect_resource());
+        v.create_resource(ResourceType::Gold, default_collect_resource());
+        v.create_resource(ResourceType::Wood, default_collect_resource());
 
         assert_eq!(3, v.resources().len());
     }
@@ -154,7 +152,7 @@ mod tests {
     fn assign_worker_to_resource() {
         let mut v = default_village();
         let w1 = v.create_worker();
-        let r1 = v.create_resource(ResourceType::Gold);
+        let r1 = v.create_resource(ResourceType::Gold, default_collect_resource());
 
         v.assign_worker(w1, r1);
 
@@ -166,7 +164,7 @@ mod tests {
     fn unassign_worker_from_resource() {
         let mut v = default_village();
         let w1 = v.create_worker();
-        let r1 = v.create_resource(ResourceType::Gold);
+        let r1 = v.create_resource(ResourceType::Gold, default_collect_resource());
 
         v.assign_worker(w1, r1);
         v.assign_worker(w1, 0);
@@ -178,7 +176,7 @@ mod tests {
     #[test]
     fn assign_worker_to_resource_invalid_worker_id() {
         let mut v = default_village();
-        let r1 = v.create_resource(ResourceType::Gold);
+        let r1 = v.create_resource(ResourceType::Gold, default_collect_resource());
 
         assert!(v.assign_worker(1, r1).is_err());
     }
@@ -202,7 +200,7 @@ mod tests {
     #[test]
     fn simulate_collect_resources() {
         let mut v = default_village();
-        let r1 = v.create_resource(ResourceType::Wood);
+        let r1 = v.create_resource(ResourceType::Wood, default_collect_resource());
         let w1 = v.create_worker();
         let w2 = v.create_worker();
 
@@ -251,13 +249,22 @@ mod tests {
     #[test]
     fn get_resources_by_type() {
         let mut v = default_village();
-        v.create_resource(ResourceType::Gold);
-        v.create_resource(ResourceType::Wood);
-        v.create_resource(ResourceType::Wood);
+        v.create_resource(ResourceType::Gold, default_collect_resource());
+        v.create_resource(ResourceType::Wood, default_collect_resource());
+        v.create_resource(ResourceType::Wood, default_collect_resource());
 
         assert_eq!(1, v.resources_of_type(ResourceType::Gold).len());
         assert_eq!(2, v.resources_of_type(ResourceType::Wood).len());
         assert_eq!(0, v.resources_of_type(ResourceType::Stone).len());
         assert_eq!(0, v.resources_of_type(ResourceType::Food).len());
+    }
+
+    #[test]
+    fn simulate_resource_collect() {
+        let mut v = default_village();
+        let r1 = v.create_resource(ResourceType::Wood, |x| 2);
+        v.simulate();
+
+        assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap());
     }
 }

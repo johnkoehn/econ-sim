@@ -17,8 +17,20 @@ impl ResourceType {
 }
 
 pub type ResourceId = u32;
+pub type CollectResource = fn(worker_count : u32) -> u32;
 
 pub struct Resource {
     pub resource_type : ResourceType,
     pub resource_id : ResourceId,
+    pub collect_resource : CollectResource,
+}
+
+impl Resource {
+    pub fn new(resource_type : ResourceType, resource_id : ResourceId, collect_resource : CollectResource) -> Resource {
+        Resource {
+            resource_type: resource_type,
+            resource_id: resource_id,
+            collect_resource: collect_resource,
+        }
+    }
 }

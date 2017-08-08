@@ -17,7 +17,7 @@ impl ResourceType {
 }
 
 pub type ResourceId = u32;
-pub type CollectResource = fn(worker_count : u32) -> u32;
+pub type CollectResource = fn(worker_count : u32) -> f64;
 
 pub struct Resource {
     pub resource_type : ResourceType,

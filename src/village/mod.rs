@@ -12,7 +12,7 @@ pub type VillageRef = Rc<RefCell<Village>>;
 pub type CheckForWorkerDeath = fn(&Worker) -> bool;
 
 pub struct Village {
-    pub stockpile: HashMap<ResourceType, u32>,
+    pub stockpile: HashMap<ResourceType, f64>,
 
     workers: Vec<Worker>,
     worker_id_counter: u32,
@@ -35,7 +35,7 @@ impl Village {
 
         //add each resource type to the stockpile
         for resource_type in ResourceType::iterator() {
-            village.stockpile.insert(*resource_type, 0);
+            village.stockpile.insert(*resource_type, 0 as f64);
         }
 
         village
@@ -134,8 +134,8 @@ mod tests {
         Village::new(|w: &Worker| false)
     }
 
-    fn default_collect_resource() -> fn(u32) -> u32 {
-        move |x| x
+    fn default_collect_resource() -> fn(u32) -> f64 {
+        move |x| x as f64
     }
 
     #[test]
@@ -194,7 +194,7 @@ mod tests {
         let v = default_village();
         let value = v.stockpile.get(&ResourceType::Food);
 
-        assert_eq!(0, *value.unwrap());
+        assert_eq!(0, *value.unwrap() as u32);
     }
 
     #[test]
@@ -208,7 +208,7 @@ mod tests {
         v.assign_worker(w2, r1);
         v.simulate();
 
-        assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap());
+        assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap() as u32);
     }
 
     #[test]
@@ -262,9 +262,9 @@ mod tests {
     #[test]
     fn simulate_resource_collect() {
         let mut v = default_village();
-        let r1 = v.create_resource(ResourceType::Wood, |x| 2);
+        let r1 = v.create_resource(ResourceType::Wood, |x| 2 as f64);
         v.simulate();
 
-        assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap());
+        assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap() as u32);
     }
 }

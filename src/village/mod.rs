@@ -44,9 +44,9 @@ impl Village {
     /// Adds a new Worker instance to this Village.
     /// Worker id values start at 1 and auto increment in subsequent invocations
     /// Returns the id of the Worker instance
-    pub fn create_worker(&mut self) -> WorkerId {
+    pub fn create_worker(&mut self, power: u32) -> WorkerId {
         self.worker_id_counter += 1;
-        self.workers.push(Worker::new(self.worker_id_counter));
+        self.workers.push(Worker::new(self.worker_id_counter, power));
 
         self.worker_id_counter
     }
@@ -110,10 +110,18 @@ impl Village {
         self.workers.iter().filter(|w| w.assigned_resource == resource_id).collect()
     }
 
+    pub fn power_on_resource(&self, resource_id: u32) -> u32 {
+        let mut power = 0;
+        for worker in self.workers_on_resource(resource_id).iter() {
+            power += worker.power;
+        }
+        power
+    }
+
     pub fn simulate(&mut self) {
         for resource in self.resources.iter() {
-            let worker_count = self.workers_on_resource(resource.resource_id).len();
-            *self.stockpile.get_mut(&resource.resource_type).unwrap() += (resource.collect_resource)(worker_count as u32);
+            let power = self.power_on_resource(resource.resource_id);
+            *self.stockpile.get_mut(&resource.resource_type).unwrap() += (resource.collect_resource)(power);
         }
 
         for worker in self.workers.iter_mut() {
@@ -129,9 +137,14 @@ impl Village {
 #[cfg(test)]
 mod tests {
     use village::*;
+    use village::worker::*;
 
     fn default_village() -> Village {
         Village::new(|w: &Worker| false)
+    }
+
+    fn default_worker(village: &mut Village) -> WorkerId {
+        village.create_worker(1)
     }
 
     fn default_collect_resource() -> fn(u32) -> f64 {
@@ -151,7 +164,7 @@ mod tests {
     #[test]
     fn assign_worker_to_resource() {
         let mut v = default_village();
-        let w1 = v.create_worker();
+        let w1 = default_worker(&mut v);
         let r1 = v.create_resource(ResourceType::Gold, default_collect_resource());
 
         v.assign_worker(w1, r1);
@@ -163,7 +176,7 @@ mod tests {
     #[test]
     fn unassign_worker_from_resource() {
         let mut v = default_village();
-        let w1 = v.create_worker();
+        let w1 = default_worker(&mut v);
         let r1 = v.create_resource(ResourceType::Gold, default_collect_resource());
 
         v.assign_worker(w1, r1);
@@ -184,7 +197,7 @@ mod tests {
     #[test]
     fn assign_worker_to_resource_invalid_resource_id() {
         let mut v = default_village();
-        let w1 = v.create_worker();
+        let w1 = default_worker(&mut v);
 
         assert!(v.assign_worker(w1, 1).is_err());
     }
@@ -201,8 +214,8 @@ mod tests {
     fn simulate_collect_resources() {
         let mut v = default_village();
         let r1 = v.create_resource(ResourceType::Wood, default_collect_resource());
-        let w1 = v.create_worker();
-        let w2 = v.create_worker();
+        let w1 = default_worker(&mut v);
+        let w2 = default_worker(&mut v);
 
         v.assign_worker(w1, r1);
         v.assign_worker(w2, r1);
@@ -214,7 +227,7 @@ mod tests {
     #[test]
     fn simulate_increase_worker_age() {
         let mut v = default_village();
-        let w1 = v.create_worker();
+        let w1 = default_worker(&mut v);
 
         v.simulate();
 
@@ -224,8 +237,8 @@ mod tests {
     #[test]
     fn simulate_increase_worker_age_multiple() {
         let mut v = default_village();
-        let w1 = v.create_worker();
-        let w2 = v.create_worker();
+        let w1 = default_worker(&mut v);
+        let w2 = default_worker(&mut v);
 
         v.simulate();
         v.simulate();
@@ -237,8 +250,8 @@ mod tests {
     #[test]
     fn simulate_worker_death() {
         let mut v = Village::new(|w| w.worker_id == 1);
-        let w1 = v.create_worker();
-        let w2 = v.create_worker();
+        let w1 = default_worker(&mut v);
+        let w2 = default_worker(&mut v);
 
         v.simulate();
 

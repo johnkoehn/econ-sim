@@ -34,20 +34,21 @@ impl Simulation {
     }
 
     pub fn simulate(&mut self) {
-
-        //update the villages and village minds with the new information
-        for iter in self.village_managers.iter_mut() {
-            iter.village.borrow_mut().simulate();
-            iter.village_mind.manage_village();
+        // update the villages and village minds with the new information
+        for vm in self.village_managers.iter_mut() {
+            vm.village.borrow_mut().simulate();
+            vm.village_mind.manage_village();
         }
 
-        //do the trading phase until no more trade request are given
+        // do the trading phase until no more trade request are given
         let mut trading = true;
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
+
         while trading {
             trade_requests.clear();
-            for mut iter in self.village_managers.iter_mut() {
-                trade_requests.append(&mut iter.village_mind.trade());
+
+            for mut vm in self.village_managers.iter_mut() {
+                trade_requests.append(&mut vm.village_mind.trade());
             }
 
             if trade_requests.len() == 0 {
@@ -55,9 +56,9 @@ impl Simulation {
             }
         }
 
-        //village minds will re-update after trading phase
-        for iter in self.village_managers.iter_mut() {
-            iter.village_mind.manage_village();
+        // update village minds
+        for vm in self.village_managers.iter_mut() {
+            vm.village_mind.manage_village();
         }
     }
 }

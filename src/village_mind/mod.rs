@@ -14,15 +14,13 @@ impl VillageMind {
         }
     }
 
-    //The village mind decides what it wants to buy and sell
-    //The function returns a vector of trade requests
+    /// Decides what to buy and sell
+    /// Returns a vector of trade requests
     pub fn trade(&mut self) -> Vec<TradeRequest> {
         vec!()
     }
 
-    //The village mind in will manage the village in this function call
-    //This involves prioritizing resources, reassigning workers, general village management
-    //and deciding what resources it wants to sell and buy
+    /// Manages the village (e.g. prioritizing resources)
     pub fn manage_village(&mut self) {
 
     }
@@ -44,6 +42,7 @@ mod tests {
     fn trade_test() {
         let v1 = default_village_ref();
         let mut mind1 = VillageMind::new(v1);
+
         assert_eq!(0, mind1.trade().len());
     }
 }

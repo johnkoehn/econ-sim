@@ -9,12 +9,12 @@ pub enum TradeType {
 pub struct TradeRequest {
     pub trade_type : TradeType,
     pub resource_type : ResourceType,
-    pub amount : f64,
+    pub amount : u32,
     pub success : bool,
 }
 
 impl TradeRequest {
-    pub fn new(trade_type: TradeType, amount: f64, resource_type: ResourceType) -> TradeRequest{
+    pub fn new(trade_type: TradeType, amount: u32, resource_type: ResourceType) -> TradeRequest{
         TradeRequest {
             trade_type: trade_type,
             amount: amount,

@@ -85,6 +85,15 @@ impl Simulation {
     }
 
     pub fn handleTrades(&mut self, trade_requests: &mut Vec<TradeRequest>) {
+        // see if this is an initial trading session (all prices are at equilibrium), or we are in a current trading session
+        let mut initial_trade_session = true;
+        for price_direction in self.price_directions.values() {
+            if *price_direction != PriceDirection::Equilibrium {
+                initial_trade_session = false;
+                break;
+            }
+        }
+
         // get the trade request for each resource type minus gold
         for resource_type in ResourceType::iterator().filter(|r| **r != ResourceType::Gold) {
             // get the total number of buys and sells requested for a resource at the current price
@@ -92,24 +101,48 @@ impl Simulation {
             let mut sells = 0;
             for trade_request in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type) {
                 if trade_request.trade_type == TradeType::Buy {
-                    buys += trade_request.amount;
+                    buys += trade_request.request_amount;
                 } else {
-                    sells += trade_request.amount;
+                    sells += trade_request.request_amount;
                 }
             }
 
             // if number of buys and sells are equal consider the price at equilibrium and fulfill the trade requests
             if buys == sells {
-                for trade_request_of_type in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type) {
-                    trade_request_of_type.success = true;
+                for trade_request in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type) {
+                    trade_request.fulfilled_amount = trade_request.request_amount;
                 }
                 self.price_directions.insert(*resource_type, PriceDirection::Equilibrium);
             }
-            // if the number of buyers are greater then sellers, the price direction will be upward and the price will increase
             else if buys > sells {
-                self.price_directions.insert(*resource_type, PriceDirection::Upward);
-                let price = self.prices.get_mut(resource_type).unwrap();
-                *price += 1;
+                if initial_trade_session {
+                    // In the initial trade session, if the number of buyers are greater then sellers
+                    // the price direction will be upward and the price will increase
+                    self.price_directions.insert(*resource_type, PriceDirection::Upward);
+                    let price = self.prices.get_mut(resource_type).unwrap();
+                    *price += 1;
+                }
+                else if *self.price_directions.get(resource_type).unwrap() == PriceDirection::Downward {
+                    // if the price direction of the resource is downward, we now have more buyers then sellers and found an acceptable equilibrium price
+                    // first fulfill all sell request
+                    for trade_request in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type && t.trade_type == TradeType::Sell) {
+                        trade_request.fulfilled_amount = trade_request.request_amount;
+                    }
+                    // iterate through all buy request until we run out of the resource to sell
+                    let mut buy_requests : Vec<&mut TradeRequest> = trade_requests.iter_mut()
+                        .filter(|t| t.resource_type == *resource_type && t.trade_type == TradeType::Buy)
+                        .collect();
+                    while sells > 0 {
+                        for buy_request in buy_requests.iter_mut() {
+                            buy_request.fulfilled_amount += 1;
+                            sells -= 1;
+                            if sells <= 0 {break;}
+                        }
+                    }
+
+                    self.price_directions.insert(*resource_type, PriceDirection::Equilibrium);
+                }
+
             }
             // if the number of sellers are greater then the number of buyers, the price direction will be downward and the price will decrease
             else {
@@ -163,8 +196,8 @@ mod tests {
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
         simulation.handleTrades(&mut trade_requests);
 
-        assert_eq!(true, trade_requests.get(0).unwrap().success);
-        assert_eq!(true, trade_requests.get(1).unwrap().success);
+        assert_eq!(1, trade_requests.get(0).unwrap().fulfilled_amount);
+        assert_eq!(1, trade_requests.get(1).unwrap().fulfilled_amount);
         assert_eq!(PriceDirection::Equilibrium, *simulation.price_directions.get(&ResourceType::Food).unwrap());
     }
 
@@ -175,7 +208,7 @@ mod tests {
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
         simulation.handleTrades(&mut trade_requests);
 
-        assert_eq!(false, trade_requests.get(0).unwrap().success);
+        assert_eq!(0, trade_requests.get(0).unwrap().fulfilled_amount);
         assert_eq!(PriceDirection::Upward, *simulation.price_directions.get(&ResourceType::Food).unwrap());
         assert_eq!(6, *simulation.prices.get(&ResourceType::Food).unwrap());
     }
@@ -187,8 +220,26 @@ mod tests {
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
         simulation.handleTrades(&mut trade_requests);
 
-        assert_eq!(false, trade_requests.get(0).unwrap().success);
+        assert_eq!(0, trade_requests.get(0).unwrap().fulfilled_amount);
         assert_eq!(PriceDirection::Downward, *simulation.price_directions.get(&ResourceType::Food).unwrap());
         assert_eq!(4, *simulation.prices.get(&ResourceType::Food).unwrap());
+    }
+
+    #[test]
+    fn handles_trades_multiple_rounds_downward() {
+        let mut simulation = Simulation::new();
+        let mut trade_requests : Vec<TradeRequest> = Vec::new();
+        trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
+        simulation.handleTrades(&mut trade_requests);
+        simulation.handleTrades(&mut trade_requests);
+        simulation.handleTrades(&mut trade_requests);
+
+        trade_requests.push(TradeRequest::new(TradeType::Buy, 5, ResourceType::Food));
+        simulation.handleTrades(&mut trade_requests);
+
+        assert_eq!(1, trade_requests.get(0).unwrap().fulfilled_amount);
+        assert_eq!(1, trade_requests.get(1).unwrap().fulfilled_amount);
+        assert_eq!(PriceDirection::Equilibrium, *simulation.price_directions.get(&ResourceType::Food).unwrap());
+        assert_eq!(2, *simulation.prices.get(&ResourceType::Food).unwrap());
     }
 }

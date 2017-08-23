@@ -98,6 +98,7 @@ impl Simulation {
                 }
             }
 
+
             // if number of buys and sells are equal consider the price at equilibrium and fulfill the trade requests
             if buys == sells {
                 for trade_request in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type) {
@@ -291,5 +292,18 @@ mod tests {
         assert_eq!(1, trade_requests.get(1).unwrap().fulfilled_amount);
         assert_eq!(PriceDirection::Equilibrium, *simulation.price_directions.get(&ResourceType::Food).unwrap());
         assert_eq!(1, *simulation.prices.get(&ResourceType::Food).unwrap());
+    }
+
+    #[test]
+    fn handle_trades_no_requests() {
+        let mut simulation = Simulation::new();
+        let mut trade_requests : Vec<TradeRequest> = Vec::new();
+        trade_requests.push(TradeRequest::new(TradeType::Sell, 2, ResourceType::Food));
+        simulation.handleTrades(&mut trade_requests);
+        simulation.handleTrades(&mut trade_requests);
+        trade_requests.clear();
+        simulation.handleTrades(&mut trade_requests);
+
+        assert_eq!(PriceDirection::Equilibrium, *simulation.price_directions.get(&ResourceType::Food).unwrap());
     }
 }

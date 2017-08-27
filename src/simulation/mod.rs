@@ -84,12 +84,13 @@ impl Simulation {
         }
     }
 
-    pub fn handleTrades(&mut self, trade_requests: &mut Vec<TradeRequest>) {
-        // get the trade request for each resource type minus gold
+    pub fn handle_trades(&mut self, trade_requests: &mut Vec<TradeRequest>) {
+        // get the trade request for each resource type, excluding gold
         for resource_type in ResourceType::iterator().filter(|r| **r != ResourceType::Gold) {
             // get the total number of buys and sells requested for a resource at the current price
             let mut buys = 0;
             let mut sells = 0;
+
             for trade_request in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type) {
                 if trade_request.trade_type == TradeType::Buy {
                     buys += trade_request.request_amount;
@@ -97,7 +98,6 @@ impl Simulation {
                     sells += trade_request.request_amount;
                 }
             }
-
 
             // if number of buys and sells are equal consider the price at equilibrium and fulfill the trade requests
             if buys == sells {
@@ -108,22 +108,25 @@ impl Simulation {
             }
             else if buys > sells {
                 let price_direction = *self.price_directions.get(resource_type).unwrap();
+
+                // equilibrium or upward: price will increase
                 if price_direction == PriceDirection::Equilibrium || price_direction == PriceDirection::Upward {
-                    // The price direction is already upwards or at equilibrium
-                    // thus the price direction will be upward and the price will increase
                     self.price_directions.insert(*resource_type, PriceDirection::Upward);
                     let price = self.prices.get_mut(resource_type).unwrap();
                     *price += 1;
-                } else { // price direction is Downward
-                    // we now have more buyers then sellers and found an acceptable equilibrium price
-                    // first fulfill all sell request
+                }
+                // downward: an acceptable equilibrium price was found
+                else {
+                    // fulfill all sell requests
                     for trade_request in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type && t.trade_type == TradeType::Sell) {
                         trade_request.fulfilled_amount = trade_request.request_amount;
                     }
-                    // iterate through all buy request until we run out of the resource to sell
+                    
                     let mut buy_requests: Vec<&mut TradeRequest> = trade_requests.iter_mut()
                         .filter(|t| t.resource_type == *resource_type && t.trade_type == TradeType::Buy)
                         .collect();
+
+                    // evenly distribute the sells amongst buyers
                     while sells > 0 {
                         for buy_request in buy_requests.iter_mut() {
                             buy_request.fulfilled_amount += 1;
@@ -134,24 +137,29 @@ impl Simulation {
 
                     self.price_directions.insert(*resource_type, PriceDirection::Equilibrium);
                 }
-            } else { //more sellers then buyers
+            }
+            // more sellers than buyers
+            else {
                 let price_direction = *self.price_directions.get(resource_type).unwrap();
-                if (price_direction == PriceDirection::Equilibrium || price_direction == PriceDirection::Downward) && *self.prices.get_mut(resource_type).unwrap() > 1 {
-                    // The price direction is already downwards or at equilibrium
-                    // thus the price direction will be downward and the price will increase
+                let price = self.prices.get_mut(resource_type).unwrap();
+
+                // equilibrium or dowward: price will decrease
+                if (price_direction == PriceDirection::Equilibrium || price_direction == PriceDirection::Downward) && *price > 1 {
                     self.price_directions.insert(*resource_type, PriceDirection::Downward);
-                    let price = self.prices.get_mut(resource_type).unwrap();
                     *price -= 1;
-                } else { //price direction is Upward or the price is 1
-                    // we now have more sellers then buyers and found an acceptable equilibrium price
+                }
+                // upward: an acceptable equilibrium price was found
+                else {
+                    // fulfill all buy requests
                     for buy_request in trade_requests.iter_mut().filter(|t| t.resource_type == *resource_type && t.trade_type == TradeType::Buy) {
                         buy_request.fulfilled_amount = buy_request.request_amount;
                     }
 
-                    // iterate through all sell request until we run out of buyers
                     let mut sell_requests : Vec<&mut TradeRequest> = trade_requests.iter_mut()
                         .filter(|t| t.resource_type == *resource_type && t.trade_type == TradeType::Sell)
                         .collect();
+
+                    // evenly distribute the buys amongst sellers
                     while buys > 0 {
                         for sell_request in sell_requests.iter_mut() {
                             sell_request.fulfilled_amount += 1;
@@ -162,7 +170,6 @@ impl Simulation {
 
                     self.price_directions.insert(*resource_type, PriceDirection::Equilibrium);
                 }
-
             }
         }
     }
@@ -208,7 +215,7 @@ mod tests {
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         assert_eq!(1, trade_requests.get(0).unwrap().fulfilled_amount);
         assert_eq!(1, trade_requests.get(1).unwrap().fulfilled_amount);
@@ -220,7 +227,7 @@ mod tests {
         let mut simulation = Simulation::new();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         assert_eq!(0, trade_requests.get(0).unwrap().fulfilled_amount);
         assert_eq!(PriceDirection::Upward, *simulation.price_directions.get(&ResourceType::Food).unwrap());
@@ -232,7 +239,7 @@ mod tests {
         let mut simulation = Simulation::new();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         assert_eq!(0, trade_requests.get(0).unwrap().fulfilled_amount);
         assert_eq!(PriceDirection::Downward, *simulation.price_directions.get(&ResourceType::Food).unwrap());
@@ -244,12 +251,12 @@ mod tests {
         let mut simulation = Simulation::new();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         trade_requests.push(TradeRequest::new(TradeType::Buy, 5, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         assert_eq!(1, trade_requests.get(0).unwrap().fulfilled_amount);
         assert_eq!(1, trade_requests.get(1).unwrap().fulfilled_amount);
@@ -262,12 +269,12 @@ mod tests {
         let mut simulation = Simulation::new();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         trade_requests.push(TradeRequest::new(TradeType::Sell, 5, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         assert_eq!(1, trade_requests.get(0).unwrap().fulfilled_amount);
         assert_eq!(1, trade_requests.get(1).unwrap().fulfilled_amount);
@@ -280,12 +287,12 @@ mod tests {
         let mut simulation = Simulation::new();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 2, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
 
         assert_eq!(1, trade_requests.get(0).unwrap().fulfilled_amount);
@@ -299,10 +306,10 @@ mod tests {
         let mut simulation = Simulation::new();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 2, ResourceType::Food));
-        simulation.handleTrades(&mut trade_requests);
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
         trade_requests.clear();
-        simulation.handleTrades(&mut trade_requests);
+        simulation.handle_trades(&mut trade_requests);
 
         assert_eq!(PriceDirection::Equilibrium, *simulation.price_directions.get(&ResourceType::Food).unwrap());
     }

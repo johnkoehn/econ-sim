@@ -1,3 +1,5 @@
+use village::resource::ResourceType;
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum TradeType {
     Buy,
@@ -6,14 +8,18 @@ pub enum TradeType {
 
 pub struct TradeRequest {
     pub trade_type : TradeType,
-    pub amount : f64,
+    pub resource_type : ResourceType,
+    pub request_amount : u32,
+    pub fulfilled_amount : u32,
 }
 
 impl TradeRequest {
-    pub fn new(trade_type : TradeType, amount : f64) -> TradeRequest{
+    pub fn new(trade_type: TradeType, amount: u32, resource_type: ResourceType) -> TradeRequest{
         TradeRequest {
             trade_type: trade_type,
-            amount: amount,
+            request_amount: amount,
+            resource_type: resource_type,
+            fulfilled_amount: 0,
         }
     }
 }

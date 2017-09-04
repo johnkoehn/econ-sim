@@ -1,0 +1,8 @@
+food_per_worker:0.25
+wood_per_house:0.25
+workers_per_house:4
+stone_per_house:0.25
+wood_to_build_house:10.0
+stone_to_build_house:10.0
+avg_worker_age:50
+percent_offspring_chance:5.0

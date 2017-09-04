@@ -1,4 +1,5 @@
 pub mod village_manager;
+pub mod simulation_settings;
 
 use self::village_manager::*;
 use village::*;
@@ -143,7 +144,7 @@ impl Simulation {
                 let price_direction = *self.price_directions.get(resource_type).unwrap();
                 let price = self.prices.get_mut(resource_type).unwrap();
 
-                // equilibrium or dowward: price will decrease
+                // equilibrium or downward: price will decrease
                 if (price_direction == PriceDirection::Equilibrium || price_direction == PriceDirection::Downward) && *price > 1 {
                     self.price_directions.insert(*resource_type, PriceDirection::Downward);
                     *price -= 1;

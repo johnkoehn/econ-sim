@@ -31,11 +31,12 @@ mod tests {
     use village::*;
     use village::worker::*;
     use village_mind::*;
+    use simulation::simulation_settings::*;
     use std::cell::RefCell;
     use std::rc::Rc;
 
     fn default_village_ref() -> Rc<RefCell<Village>> {
-        Rc::new(RefCell::new(Village::new(|w: &Worker| false)))
+        Rc::new(RefCell::new(Village::new(|w: &Worker| false, RefCell::new(SimulationSettings::new("test_files/settings.txt")))))
     }
 
     #[test]

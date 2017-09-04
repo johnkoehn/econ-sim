@@ -6,6 +6,7 @@ use village::*;
 use village::resource::*;
 use village_mind::*;
 use village_mind::trade_request::*;
+use simulation::simulation_settings::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
@@ -19,15 +20,17 @@ pub enum PriceDirection {
 
 pub struct Simulation {
     village_managers: Vec<VillageManager>,
+    settings: RefCell<SimulationSettings>,
     pub prices: HashMap<ResourceType, u32>,
     pub price_directions: HashMap<ResourceType, PriceDirection>,
 }
 
 impl Simulation {
-    pub fn new() -> Simulation {
+    pub fn new(settings_file: &str) -> Simulation {
 
         let mut simulation = Simulation {
             village_managers: vec!(),
+            settings: RefCell::new(SimulationSettings::new(settings_file)),
             prices: HashMap::new(),
             price_directions: HashMap::new(),
         };
@@ -184,13 +187,14 @@ mod tests {
     use village::resource::*;
     use village_mind::trade_request::*;
 
+    fn default_simulation() -> Simulation { Simulation::new("test_files/settings.txt") }
     fn default_village() -> Village {
-        Village::new(|w: &worker::Worker| false)
+        Village::new(|w: &worker::Worker| false, RefCell::new(SimulationSettings::new("test_files/settings.txt")))
     }
 
     #[test]
     fn add_village() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         simulation.add_village(default_village());
 
         assert_eq!(1, simulation.village_managers().len());
@@ -198,21 +202,21 @@ mod tests {
 
     #[test]
     fn initial_resource_prices() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
 
         assert_eq!(5, *simulation.prices.get(&ResourceType::Food).unwrap());
     }
 
     #[test]
     fn initial_price_directions() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
 
         assert_eq!(PriceDirection::Equilibrium, *simulation.price_directions.get(&ResourceType::Food).unwrap());
     }
 
     #[test]
     fn handle_trades_basic_sell_and_buy() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
@@ -225,7 +229,7 @@ mod tests {
 
     #[test]
     fn handle_trades_upward_price() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
         simulation.handle_trades(&mut trade_requests);
@@ -237,7 +241,7 @@ mod tests {
 
     #[test]
     fn handle_trades_downward_price() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
         simulation.handle_trades(&mut trade_requests);
@@ -249,7 +253,7 @@ mod tests {
 
     #[test]
     fn handle_trades_multiple_rounds_downward() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 1, ResourceType::Food));
         simulation.handle_trades(&mut trade_requests);
@@ -267,7 +271,7 @@ mod tests {
 
     #[test]
     fn handle_trades_multiple_rounds_upward() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Buy, 1, ResourceType::Food));
         simulation.handle_trades(&mut trade_requests);
@@ -285,7 +289,7 @@ mod tests {
 
     #[test]
     fn handle_trades_price_minimum() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 2, ResourceType::Food));
         simulation.handle_trades(&mut trade_requests);
@@ -304,7 +308,7 @@ mod tests {
 
     #[test]
     fn handle_trades_no_requests() {
-        let mut simulation = Simulation::new();
+        let mut simulation = default_simulation();
         let mut trade_requests : Vec<TradeRequest> = Vec::new();
         trade_requests.push(TradeRequest::new(TradeType::Sell, 2, ResourceType::Food));
         simulation.handle_trades(&mut trade_requests);

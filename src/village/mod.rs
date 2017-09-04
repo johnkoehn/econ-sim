@@ -3,6 +3,7 @@ pub mod worker;
 
 use village::resource::*;
 use village::worker::*;
+use simulation::simulation_settings::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -18,18 +19,20 @@ pub struct Village {
     worker_id_counter: u32,
     resources: Vec<Resource>,
     resource_id_counter: u32,
+    simulation_settings: RefCell<SimulationSettings>,
 
     check_for_worker_death: CheckForWorkerDeath,
 }
 
 impl Village {
-    pub fn new(check_for_worker_death: CheckForWorkerDeath) -> Village {
+    pub fn new(check_for_worker_death: CheckForWorkerDeath, simulation_settings: RefCell<SimulationSettings>) -> Village {
         let mut village = Village {
             stockpile: HashMap::new(),
             workers: vec!(),
             worker_id_counter: 0,
             resources: vec!(),
             resource_id_counter: 0,
+            simulation_settings: simulation_settings,
             check_for_worker_death: check_for_worker_death,
         };
 
@@ -138,9 +141,12 @@ impl Village {
 mod tests {
     use village::*;
     use village::worker::*;
+    use simulation::simulation_settings::*;
+    use std::cell::RefCell;
 
     fn default_village() -> Village {
-        Village::new(|w: &Worker| false)
+        let simulation_settings = SimulationSettings::new("test_files/settings.txt");
+        Village::new(|w: &Worker| false, RefCell::new(SimulationSettings::new("test_files/settings.txt")))
     }
 
     fn default_worker(village: &mut Village) -> WorkerId {
@@ -249,7 +255,7 @@ mod tests {
 
     #[test]
     fn simulate_worker_death() {
-        let mut v = Village::new(|w| w.worker_id == 1);
+        let mut v = Village::new(|w| w.worker_id == 1, RefCell::new(SimulationSettings::new("test_files/settings.txt")));
         let w1 = default_worker(&mut v);
         let w2 = default_worker(&mut v);
 

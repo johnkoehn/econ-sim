@@ -36,7 +36,7 @@ mod tests {
     use std::rc::Rc;
 
     fn default_village_ref() -> Rc<RefCell<Village>> {
-        Rc::new(RefCell::new(Village::new(|w: &Worker| false, RefCell::new(SimulationSettings::new("test_files/settings.txt")))))
+        Rc::new(RefCell::new(Village::new(|w: &Worker| false, Rc::new(SimulationSettings::new("test_files/settings.txt")))))
     }
 
     #[test]

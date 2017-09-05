@@ -20,7 +20,7 @@ pub enum PriceDirection {
 
 pub struct Simulation {
     village_managers: Vec<VillageManager>,
-    settings: RefCell<SimulationSettings>,
+    settings: Rc<SimulationSettings>,
     pub prices: HashMap<ResourceType, u32>,
     pub price_directions: HashMap<ResourceType, PriceDirection>,
 }
@@ -30,7 +30,7 @@ impl Simulation {
 
         let mut simulation = Simulation {
             village_managers: vec!(),
-            settings: RefCell::new(SimulationSettings::new(settings_file)),
+            settings: Rc::new(SimulationSettings::new(settings_file)),
             prices: HashMap::new(),
             price_directions: HashMap::new(),
         };
@@ -45,8 +45,8 @@ impl Simulation {
         simulation
     }
 
-    pub fn add_village(&mut self, village: Village) {
-        let villageRC = Rc::new(RefCell::new(village));
+    pub fn add_village(&mut self, check_for_worker_death: CheckForWorkerDeath) {
+        let villageRC = Rc::new(RefCell::new(Village::new(check_for_worker_death, self.settings.clone())));
         let village_manager = VillageManager {
             village: villageRC.clone(),
             village_mind: VillageMind::new(villageRC.clone()),
@@ -189,13 +189,13 @@ mod tests {
 
     fn default_simulation() -> Simulation { Simulation::new("test_files/settings.txt") }
     fn default_village() -> Village {
-        Village::new(|w: &worker::Worker| false, RefCell::new(SimulationSettings::new("test_files/settings.txt")))
+        Village::new(|w: &worker::Worker| false, Rc::new(SimulationSettings::new("test_files/settings.txt")))
     }
 
     #[test]
     fn add_village() {
         let mut simulation = default_simulation();
-        simulation.add_village(default_village());
+        simulation.add_village(|w: &worker::Worker| false);
 
         assert_eq!(1, simulation.village_managers().len());
     }

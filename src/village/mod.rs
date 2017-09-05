@@ -27,7 +27,7 @@ pub struct Village {
 impl Village {
     pub fn new(check_for_worker_death: CheckForWorkerDeath, simulation_settings: Rc<SimulationSettings>) -> Village {
         let mut village = Village {
-            stockpile: HashMap::new(),
+            stockpile: simulation_settings.starting_stockpile.clone(),
             workers: vec!(),
             worker_id_counter: 0,
             resources: vec!(),
@@ -35,11 +35,6 @@ impl Village {
             simulation_settings: simulation_settings,
             check_for_worker_death: check_for_worker_death,
         };
-
-        //add each resource type to the stockpile
-        for resource_type in ResourceType::iterator() {
-            village.stockpile.insert(*resource_type, 0 as f64);
-        }
 
         village
     }
@@ -139,9 +134,11 @@ impl Village {
 #[cfg(test)]
 mod tests {
     use village::*;
+    use village::resource::*;
     use village::worker::*;
     use simulation::simulation_settings::*;
     use std::cell::RefCell;
+    use std::collections::HashMap;
 
     fn default_village() -> Village {
         let simulation_settings = SimulationSettings::new("test_files/settings.txt");
@@ -284,5 +281,10 @@ mod tests {
         v.simulate();
 
         assert_eq!(2, *v.stockpile.get(&ResourceType::Wood).unwrap() as u32);
+    }
+
+    #[test]
+    fn worker_food_death() {
+
     }
 }

@@ -1,6 +1,9 @@
+use village::resource::ResourceType;
+
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::collections::HashMap;
 
 pub struct SimulationSettings {
     pub filename: String,
@@ -12,6 +15,7 @@ pub struct SimulationSettings {
     pub stone_to_build_house: f64,
     pub avg_worker_age: u32,
     pub percent_offspring_chance: f64,
+    pub starting_stockpile: HashMap<ResourceType, f64>,
 }
 
 impl SimulationSettings {
@@ -26,7 +30,13 @@ impl SimulationSettings {
             stone_to_build_house: 1.0,
             avg_worker_age: 10,
             percent_offspring_chance: 10.0,
+            starting_stockpile: HashMap::new(),
         };
+
+        for resource_type in ResourceType::iterator() {
+            simulation_settings.starting_stockpile.insert(*resource_type, 0.0);
+        }
+
         let mut file = File::open(filename).expect("Settings file not found!");
         let mut reader = BufReader::new(file);
 
@@ -66,6 +76,14 @@ impl SimulationSettings {
                         simulation_settings.avg_worker_age = SimulationSettings::parse_int(variable_value);
                     } else if variable_name == "percent_offspring_chance" {
                         simulation_settings.percent_offspring_chance = SimulationSettings::parse_float(variable_value);
+                    } else if variable_name == "starting_gold" {
+                        simulation_settings.starting_stockpile.insert(ResourceType::Gold, SimulationSettings::parse_float(variable_value));
+                    } else if variable_name == "starting_wood" {
+                        simulation_settings.starting_stockpile.insert(ResourceType::Wood, SimulationSettings::parse_float(variable_value));
+                    } else if variable_name == "starting_stone" {
+                        simulation_settings.starting_stockpile.insert(ResourceType::Stone, SimulationSettings::parse_float(variable_value));
+                    } else if variable_name == "starting_food" {
+                        simulation_settings.starting_stockpile.insert(ResourceType::Food, SimulationSettings::parse_float(variable_value));
                     } else {
                         println!("Invalid Data in setting file!!! {}", variable_name);
                     }

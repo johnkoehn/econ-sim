@@ -186,6 +186,7 @@ mod tests {
     use simulation::*;
     use village::resource::*;
     use village_mind::trade_request::*;
+    use std::collections::HashMap;
 
     fn default_simulation() -> Simulation { Simulation::new("test_files/settings.txt") }
     fn default_village() -> Village {
